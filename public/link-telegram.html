@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TeleAuth — Link Telegram</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3e;
+      --accent: #6366f1; --text: #e2e8f0; --muted: #94a3b8;
+      --success: #22c55e; --error: #ef4444; --radius: 14px;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2.5rem; width: 100%; max-width: 480px;
+      box-shadow: 0 25px 50px rgba(0,0,0,.4);
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+    .sub { color: var(--muted); font-size: .875rem; margin-bottom: 2rem; }
+    .steps { counter-reset: step; display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2rem; }
+    .step {
+      display: flex; gap: 1rem; align-items: flex-start;
+      counter-increment: step;
+    }
+    .step-num {
+      flex-shrink: 0; width: 28px; height: 28px;
+      background: var(--accent); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 700; color: #fff;
+    }
+    .step-num::before { content: counter(step); }
+    .step-body h3 { font-size: .95rem; font-weight: 600; margin-bottom: .25rem; }
+    .step-body p  { color: var(--muted); font-size: .85rem; }
+    code {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: .15rem .4rem; font-family: monospace; font-size: .85rem;
+      color: var(--accent);
+    }
+    label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .4rem; font-weight: 500; }
+    input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: .75rem 1rem;
+      font-size: 1rem; outline: none; transition: border-color .2s; margin-bottom: 1.2rem;
+    }
+    input:focus { border-color: var(--accent); }
+    button[type="submit"] {
+      width: 100%; background: var(--accent); color: #fff; border: none;
+      border-radius: 8px; padding: .8rem; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background .2s, opacity .2s;
+    }
+    button[type="submit"]:hover { background: #818cf8; }
+    button[type="submit"]:disabled { opacity: .5; cursor: not-allowed; }
+    .msg { border-radius: 8px; padding: .75rem 1rem; font-size: .875rem; margin-bottom: 1rem; display: none; }
+    .msg.error   { background: rgba(239,68,68,.1);  border: 1px solid var(--error);   color: var(--error); }
+    .msg.success { background: rgba(34,197,94,.1);  border: 1px solid var(--success); color: var(--success); }
+    .back { text-align: center; margin-top: 1rem; font-size: .85rem; color: var(--muted); }
+    .back a { color: var(--accent); text-decoration: none; }
+    .code-box {
+      background: var(--bg); border: 2px dashed var(--accent);
+      border-radius: 8px; padding: 1rem; text-align: center;
+      font-family: monospace; font-size: 2rem; letter-spacing: .3rem;
+      color: var(--accent); margin-bottom: 1rem; display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div style="font-size:2rem;margin-bottom:.5rem">💬</div>
+  <h1>Link Your Telegram</h1>
+  <p class="sub">Connect your Telegram account to enable one-click login via deep-link.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num"></div>
+      <div class="step-body">
+        <h3>Find your Telegram Chat ID</h3>
+        <p>Message <a href="https://t.me/userinfobot" target="_blank" style="color:var(--accent)">@userinfobot</a> on Telegram. It will reply with your numeric Chat ID.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div class="step-body">
+        <h3>Enter your Chat ID below</h3>
+        <p>Paste it in the field below to generate a link code.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num"></div>
+      <div class="step-body">
+        <h3>Send the code to the bot</h3>
+        <p>Open <code>@<span id="bot-name">TeleAuthBot</span></code> on Telegram and send: <code>/link &lt;code&gt;</code></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="msg error"   id="error-msg"></div>
+  <div class="msg success" id="success-msg"></div>
+  <div class="code-box"    id="code-box"></div>
+
+  <form id="link-form">
+    <label for="email">Email (to look up your account)</label>
+    <input id="email" name="email" type="email" placeholder="you@company.com" required />
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" placeholder="••••••••" required />
+
+    <label for="chatId">Your Telegram Chat ID</label>
+    <input id="chatId" name="chatId" type="text" placeholder="e.g. 123456789" required />
+
+    <button type="submit" id="submit-btn">Generate Link Code</button>
+  </form>
+
+  <div class="back"><a href="/login">← Back to Login</a></div>
+</div>
+
+<script>
+  // Pre-fill email
+  const stored = sessionStorage.getItem('teleauth_email') || localStorage.getItem('teleauth_email');
+  if (stored) document.getElementById('email').value = stored;
+
+  document.getElementById('link-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const err = document.getElementById('error-msg');
+    const ok  = document.getElementById('success-msg');
+    const box = document.getElementById('code-box');
+
+    err.style.display = ok.style.display = box.style.display = 'none';
+    btn.disabled = true; btn.textContent = '⏳ Working…';
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const chatId   = document.getElementById('chatId').value.trim();
+
+    // Step 1: login to get access token cookie
+    const loginRes = await fetch('/api/auth/login-for-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      credentials: 'same-origin',
+    });
+
+    if (!loginRes.ok) {
+      const d = await loginRes.json();
+      err.textContent  = d.message || 'Authentication failed.';
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Generate Link Code';
+      return;
+    }
+
+    // Step 2: request link code
+    const linkRes = await fetch('/api/auth/link-telegram-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegramChatId: chatId }),
+      credentials: 'same-origin',
+    });
+
+    const data = await linkRes.json();
+    btn.disabled = false; btn.textContent = 'Generate Link Code';
+
+    if (!linkRes.ok) {
+      err.textContent  = data.message || 'Failed to generate code.';
+      err.style.display = 'block';
+      return;
+    }
+
+    box.textContent  = data.code;
+    box.style.display = 'block';
+    ok.innerHTML = `✅ Code generated! Send this to <strong>@${getBotName()}</strong> on Telegram:<br>
+      <code style="font-size:1rem">/link ${data.code}</code>`;
+    ok.style.display = 'block';
+  });
+
+  function getBotName() {
+    return document.getElementById('bot-name').textContent;
+  }
+
+  // Load bot name from meta or env
+  fetch('/api/meta').then(r => r.json()).then(d => {
+    if (d.botName) document.getElementById('bot-name').textContent = d.botName;
+  }).catch(() => {});
+</script>
+</body>
+</html>

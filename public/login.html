@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TeleAuth — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3e;
+      --accent: #6366f1; --accent-hover: #818cf8;
+      --text: #e2e8f0; --muted: #94a3b8;
+      --success: #22c55e; --error: #ef4444; --radius: 14px;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh; display: flex; align-items: center;
+      justify-content: center; padding: 1rem;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2.5rem;
+      width: 100%; max-width: 420px; box-shadow: 0 25px 50px rgba(0,0,0,.4);
+    }
+    .logo { font-size: 2.2rem; text-align: center; margin-bottom: .5rem; }
+    h1 { text-align: center; font-size: 1.5rem; font-weight: 700; margin-bottom: .4rem; }
+    .subtitle { text-align: center; color: var(--muted); font-size: .875rem; margin-bottom: 2rem; }
+    label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .4rem; font-weight: 500; }
+    input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: .75rem 1rem;
+      font-size: 1rem; outline: none; transition: border-color .2s; margin-bottom: 1.2rem;
+    }
+    input:focus { border-color: var(--accent); }
+    button[type="submit"] {
+      width: 100%; background: var(--accent); color: #fff; border: none;
+      border-radius: 8px; padding: .8rem; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background .2s, opacity .2s;
+    }
+    button[type="submit"]:hover { background: var(--accent-hover); }
+    button[type="submit"]:disabled { opacity: .5; cursor: not-allowed; }
+    .error-msg {
+      background: rgba(239,68,68,.1); border: 1px solid var(--error);
+      color: var(--error); border-radius: 8px; padding: .75rem 1rem;
+      font-size: .875rem; margin-bottom: 1rem; display: none;
+    }
+    /* ── Waiting screen ── */
+    #waiting-screen { display: none; text-align: center; }
+    .spinner {
+      width: 56px; height: 56px; border: 4px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 1s linear infinite; margin: 0 auto 1.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #waiting-screen h2 { font-size: 1.25rem; margin-bottom: .5rem; }
+    #waiting-screen p  { color: var(--muted); font-size: .9rem; margin-bottom: 1.5rem; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 999px; padding: .4rem 1rem;
+      font-size: .85rem; color: var(--muted); margin-bottom: 1.5rem;
+    }
+    .pulse {
+      width: 8px; height: 8px; background: var(--accent); border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .5; transform: scale(.7); }
+    }
+    .confirmed-icon { font-size: 3rem; margin-bottom: 1rem; display: none; }
+    .link-telegram { margin-top: 1.5rem; text-align: center; font-size: .85rem; color: var(--muted); }
+    .link-telegram a { color: var(--accent); text-decoration: none; }
+    .link-telegram a:hover { text-decoration: underline; }
+    #cancel-btn {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 8px; padding: .6rem 1.2rem; cursor: pointer; font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <!-- ── Login Form ── -->
+  <div id="login-form">
+    <div class="logo">🔐</div>
+    <h1>TeleAuth</h1>
+    <p class="subtitle">Enter your password — your Telegram does the rest.</p>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <form id="form">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email"
+             placeholder="you@company.com" autocomplete="email" required />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password"
+             placeholder="••••••••" autocomplete="current-password" required />
+
+      <button type="submit" id="submit-btn">
+        📱 Send Login Link to Telegram
+      </button>
+    </form>
+
+    <div class="link-telegram">
+      First time? <a href="/link-telegram">Link your Telegram account →</a>
+    </div>
+  </div>
+
+  <!-- ── Waiting Screen ── -->
+  <div id="waiting-screen">
+    <div class="confirmed-icon" id="confirmed-icon">✅</div>
+    <div class="spinner" id="spinner"></div>
+    <h2 id="waiting-title">Check your Telegram</h2>
+    <p id="waiting-msg">A login link has been sent to your Telegram. Click it to log in on this or another device.</p>
+    <div class="status-badge">
+      <span class="pulse" id="pulse"></span>
+      <span id="status-text">Waiting for confirmation…</span>
+    </div>
+    <button type="button" id="cancel-btn">← Back to Login</button>
+  </div>
+
+</div>
+
+<script>
+  // ── Pre-fill email ──────────────────────────────────────────────────────
+  (function prefill() {
+    const urlEmail = new URLSearchParams(location.search).get('email');
+    const stored   = sessionStorage.getItem('teleauth_email') || localStorage.getItem('teleauth_email');
+    const email    = urlEmail || stored || '';
+    if (email) {
+      document.getElementById('email').value = email;
+      document.getElementById('password').focus();
+    }
+  })();
+
+  const loginDiv   = document.getElementById('login-form');
+  const waitingDiv = document.getElementById('waiting-screen');
+  const errorMsg   = document.getElementById('error-msg');
+  let pollTimer    = null;
+  let sessionId    = null;
+
+  function showError(msg) {
+    errorMsg.textContent  = msg;
+    errorMsg.style.display = 'block';
+    const btn = document.getElementById('submit-btn');
+    btn.disabled    = false;
+    btn.textContent = '📱 Send Login Link to Telegram';
+  }
+
+  // ── Submit ───────────────────────────────────────────────────────────────
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorMsg.style.display = 'none';
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn      = document.getElementById('submit-btn');
+    btn.disabled    = true;
+    btn.textContent = '⏳ Sending…';
+
+    localStorage.setItem('teleauth_email', email);
+    sessionStorage.setItem('teleauth_email', email);
+
+    try {
+      const res  = await fetch('/api/auth/login', {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body:        JSON.stringify({ email, password, requestDevice: 'Reception Desk — Ground Floor' }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) { showError(data.message || 'Login failed.'); return; }
+
+      sessionId = data.sessionId;
+      showWaiting(sessionId);
+
+    } catch {
+      showError('Network error — please try again.');
+    }
+  });
+
+  // ── Waiting screen ───────────────────────────────────────────────────────
+  function showWaiting(sid) {
+    loginDiv.style.display   = 'none';
+    waitingDiv.style.display = 'block';
+    // Poll every 3s — simple, reliable, no SSE needed
+    pollTimer = setInterval(() => poll(sid), 3000);
+  }
+
+  async function poll(sid) {
+    try {
+      const res  = await fetch(`/api/auth/session-status?sessionId=${sid}`, { credentials: 'same-origin' });
+      const data = await res.json();
+      if (data.status === 'confirmed') onConfirmed();
+    } catch (_) {}
+  }
+
+  function onConfirmed() {
+    clearInterval(pollTimer);
+    document.getElementById('spinner').style.display        = 'none';
+    document.getElementById('confirmed-icon').style.display = 'block';
+    document.getElementById('pulse').style.background       = 'var(--success)';
+    document.getElementById('status-text').textContent      = '✅ Session confirmed!';
+    document.getElementById('waiting-title').textContent    = 'You\'re in!';
+    document.getElementById('waiting-msg').textContent      =
+      '🎉 Session confirmed on another device. Redirecting to dashboard…';
+    setTimeout(() => window.location.href = '/dashboard', 3000);
+  }
+
+  // ── Cancel button ────────────────────────────────────────────────────────
+  document.getElementById('cancel-btn').addEventListener('click', () => {
+    clearInterval(pollTimer);
+    waitingDiv.style.display = 'none';
+    loginDiv.style.display   = 'block';
+    const btn = document.getElementById('submit-btn');
+    btn.disabled    = false;
+    btn.textContent = '📱 Send Login Link to Telegram';
+    document.getElementById('password').value = '';
+  });
+</script>
+</body>
+</html>

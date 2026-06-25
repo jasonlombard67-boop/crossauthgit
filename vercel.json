@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    { "source": "/auth/telegram-verify", "destination": "/api/auth/telegram-verify" },
+    { "source": "/login",                "destination": "/public/login.html" },
+    { "source": "/dashboard",            "destination": "/public/dashboard.html" },
+    { "source": "/link-telegram",        "destination": "/public/link-telegram.html" }
+  ],
+  "headers": [],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
+    }
+  }
+}

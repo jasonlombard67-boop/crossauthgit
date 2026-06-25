@@ -1,0 +1,31 @@
+{
+  "name": "teleauth",
+  "version": "2.0.0",
+  "description": "Zero-friction cross-device authentication via Telegram deep-link OTP — Vercel edition",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.0",
+    "bcrypt": "^5.1.1",
+    "cookie": "^0.6.0",
+    "dotenv": "^17.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "prisma": "^5.10.0",
+    "vercel": "^37.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

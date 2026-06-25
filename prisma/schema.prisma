@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  fullName            String    @map("full_name")
+  telegramChatId      String?   @unique @map("telegram_chat_id")
+  telegramUsername    String?   @map("telegram_username")
+  telegramLinkedAt    DateTime? @map("telegram_linked_at")
+  lastLoginAt         DateTime? @map("last_login_at")
+  lastLoginIp         String?   @map("last_login_ip")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  refreshTokens        RefreshToken[]
+  otpTokens            OtpToken[]
+  sessionConfirmations SessionConfirmation[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  token      String    @unique
+  expiresAt  DateTime  @map("expires_at")
+  deviceInfo Json?     @map("device_info")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+enum OtpType {
+  login
+  telegram_link
+  password_reset
+}
+
+model OtpToken {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  token         String    @unique
+  type          OtpType
+  requestIp     String?   @map("request_ip")
+  requestDevice String?   @map("request_device")
+  expiresAt     DateTime  @map("expires_at")
+  usedAt        DateTime? @map("used_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionConfirmations SessionConfirmation[]
+
+  @@index([token])
+  @@map("otp_tokens")
+}
+
+enum ConfirmationStatus {
+  pending
+  confirmed
+  expired
+  failed
+}
+
+model SessionConfirmation {
+  id                String             @id @default(uuid())
+  userId            String             @map("user_id")
+  otpTokenId        String             @map("otp_token_id")
+  status            ConfirmationStatus @default(pending)
+  confirmedDeviceIp String?            @map("confirmed_device_ip")
+  confirmedAt       DateTime?          @map("confirmed_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  otpToken OtpToken @relation(fields: [otpTokenId], references: [id], onDelete: Cascade)
+
+  @@map("session_confirmations")
+}
