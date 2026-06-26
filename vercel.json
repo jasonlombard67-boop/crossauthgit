@@ -1,4 +1,5 @@
 {
+  "devCommand": "node --version",
   "rewrites": [
     { "source": "/auth/telegram-verify", "destination": "/api/auth/telegram-verify" },
     { "source": "/login",                "destination": "/public/login.html" },
